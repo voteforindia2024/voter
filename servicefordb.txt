@@ -1,0 +1,204 @@
+==> Export your database from sqlite in db format
+==> using pocketbase and below code to move your data in json
+const sqlite3 = require('sqlite3').verbose();
+
+// UPDATE THIS with your actual .db filename
+const DB_FILENAME = './VoterappDB.db';
+
+let imported = 0;
+let errors = 0;
+let startTime = Date.now();
+
+async function startCompleteImport() {
+    console.log('🚀 Complete Voter Data Import');
+    console.log('==============================\n');
+    
+    console.log('📋 Configuration:');
+    console.log('   Database:', DB_FILENAME);
+    console.log('   Target: http://127.0.0.1:8090/api/collections/voterData/records');
+    console.log('   Started:', new Date().toLocaleString(), '\n');
+    
+    const db = new sqlite3.Database(DB_FILENAME);
+    
+    try {
+        // Get total records
+        const total = await getRowCount(db);
+        console.log(`📊 Found ${total.toLocaleString()} voter records to import\n`);
+        
+        console.log('🎯 Starting import process...\n');
+        
+        // Import in batches
+        const BATCH_SIZE = 100;
+        let offset = 0;
+        
+        while (offset < total) {
+            const batch = await getBatch(db, offset, BATCH_SIZE);
+            await processBatch(batch);
+            offset += batch.length;
+            
+            // Show progress
+            if (offset % 1000 === 0 || offset === total) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const speed = Math.round(offset / elapsed);
+                const percent = ((offset / total) * 100).toFixed(1);
+                const estimatedTotal = Math.round((total * elapsed) / offset);
+                const remaining = estimatedTotal - elapsed;
+                
+                console.log(`📈 ${offset.toLocaleString()}/${total.toLocaleString()} (${percent}%)`);
+                console.log(`   ⚡ ${speed} records/sec | ⏱️ ${formatTime(remaining)} remaining`);
+            }
+            
+            // Rate limiting to avoid overwhelming the server
+            if (offset < total) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+        }
+        
+        const totalTime = (Date.now() - startTime) / 1000;
+        console.log('\n🎉 IMPORT COMPLETED SUCCESSFULLY!');
+        console.log('==================================');
+        console.log(`✅ Successfully imported: ${imported.toLocaleString()}`);
+        console.log(`❌ Errors: ${errors}`);
+        console.log(`⏱️ Total time: ${formatTime(totalTime)}`);
+        console.log(`⚡ Average speed: ${Math.round(imported / totalTime)} records/sec`);
+        console.log(`📊 Success rate: ${((imported / total) * 100).toFixed(1)}%`);
+        
+    } catch (error) {
+        console.error('💥 Fatal error:', error);
+    } finally {
+        db.close();
+        console.log('\n🔒 Database connection closed');
+    }
+}
+
+async function processBatch(batch) {
+    for (const record of batch) {
+        try {
+            // Clean and prepare the record
+            const cleanRecord = {};
+            
+            for (const [key, value] of Object.entries(record)) {
+                if (value === null || value === undefined) {
+                    cleanRecord[key] = "";
+                } else if (typeof value === 'number') {
+                    cleanRecord[key] = value;
+                } else {
+                    cleanRecord[key] = String(value);
+                }
+            }
+            
+            // Send to PocketBase
+            const response = await fetch(
+                'http://127.0.0.1:8090/api/collections/voterData/records',
+                {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(cleanRecord)
+                }
+            );
+            
+            if (response.ok) {
+                imported++;
+            } else {
+                errors++;
+                // Show detailed error for first 5 failures only
+                if (errors <= 5) {
+                    try {
+                        const errorText = await response.text();
+                        console.log(`❌ Error ${errors} (HTTP ${response.status}):`, errorText.substring(0, 150));
+                    } catch (e) {
+                        console.log(`❌ Error ${errors} (HTTP ${response.status}): Could not read error message`);
+                    }
+                }
+            }
+        } catch (error) {
+            errors++;
+            if (errors <= 5) {
+                console.log(`❌ Network error ${errors}:`, error.message);
+            }
+        }
+    }
+}
+
+function getRowCount(db) {
+    return new Promise((resolve, reject) => {
+        db.get('SELECT COUNT(*) as count FROM voters', (err, row) => {
+            if (err) reject(err);
+            else resolve(row.count);
+        });
+    });
+}
+
+function getBatch(db, offset, limit) {
+    return new Promise((resolve, reject) => {
+        db.all(
+            'SELECT * FROM voters LIMIT ? OFFSET ?',
+            [limit, offset],
+            (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            }
+        );
+    });
+}
+
+function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${secs}s`;
+    } else {
+        return `${secs}s`;
+    }
+}
+
+// Handle Ctrl+C gracefully
+process.on('SIGINT', () => {
+    console.log('\n⚠️ Import interrupted by user');
+    console.log('📊 Final progress:');
+    console.log(`   ✅ Imported: ${imported.toLocaleString()}`);
+    console.log(`   ❌ Errors: ${errors}`);
+    console.log(`   📈 Progress: ${((imported / (imported + errors)) * 100).toFixed(1)}% success rate`);
+    process.exit(0);
+});
+
+// Check if database file exists
+const fs = require('fs');
+if (!fs.existsSync(DB_FILENAME)) {
+    console.log('❌ Database file not found:', DB_FILENAME);
+    console.log('💡 Please update the DB_FILENAME variable in the script');
+    console.log('💡 Current files in directory:');
+    fs.readdirSync('.').forEach(file => {
+        if (file.endsWith('.db')) {
+            console.log('   - ' + file);
+        }
+    });
+    process.exit(1);
+}
+
+console.log('💡 Press Ctrl+C at any time to stop the import\n');
+console.log('🚀 Starting import in 3 seconds...\n');
+
+// Brief delay before starting
+setTimeout(() => {
+    startCompleteImport().catch(console.error);
+}, 3000);
+
+==> It will create pocketbase-deploy with data
+==> move your code and databse in github with LFS(large file configuration)
+==> create render.yaml and dockerfile for deploymnet in rendere
+==> you will get below url:
+
+ Main Website: https://voter-database.onrender.com
+
+🔐 Admin Dashboard: https://voter-database.onrender.com/_/
+
+📊 API Endpoint: https://voter-database.onrender.com/api/
+
+👥 Voters Data: https://voter-database.onrender.com/api/collections/voters/records
