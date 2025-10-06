@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: voter-database
+    env: docker
+    docker:
+      dockerfile: Dockerfile
+    envVars:
+      - key: PORT
+        value: 8080
+    plan: free
