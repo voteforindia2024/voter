@@ -3,13 +3,15 @@ FROM alpine:latest
 # Install dependencies
 RUN apk add --no-cache ca-certificates
 
-# Download PocketBase
-ADD https://github.com/pocketbase/pocketbase/releases/download/v0.22.9/pocketbase_0.22.9_linux_amd64 /pocketbase
-RUN chmod +x /pocketbase
+# Download latest PocketBase
+RUN wget -O pocketbase.zip $(wget -q -O - https://api.github.com/repos/pocketbase/pocketbase/releases/latest | grep "browser_download_url.*linux_amd64.zip" | cut -d '"' -f 4) && \
+    unzip pocketbase.zip && \
+    chmod +x pocketbase && \
+    mv pocketbase /usr/local/bin/ && \
+    rm pocketbase.zip
 
-# Copy database
+# Copy your database
 COPY pb_data /pb_data
 
-# Expose and run
 EXPOSE 8080
-CMD ["/pocketbase", "serve", "--dir", "/pb_data", "--http=0.0.0.0:8080"]
+CMD ["pocketbase", "serve", "--dir", "/pb_data", "--http=0.0.0.0:8080"]
