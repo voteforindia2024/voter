@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: pocketbase-render
+    env: linux
+    region: oregon
+    plan: free
+    buildCommand: ""
+    startCommand: "./pocketbase-render serve --dir /mnt/pb_data"
+    disk:
+      mountPath: /mnt/pb_data
+      sizeGB: 1
+    envVars:
+      - key: PB_DATA_DIR
+        value: /mnt/pb_data

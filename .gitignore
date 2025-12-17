@@ -1,0 +1,17 @@
+# Ignore node modules
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+
+# PocketBase runtime database & data
+pocketbase-render/pb_data/
+
+# OS files
+.DS_Store
+Thumbs.db
