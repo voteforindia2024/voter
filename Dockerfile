@@ -5,13 +5,14 @@ RUN apk add --no-cache bash
 
 WORKDIR /app
 
-# 1. Download Linux binary for Render (NOT your Windows .exe)
-RUN wget -q https://github.com/pocketbase/pocketbase/releases/download/v0.22.17/pocketbase_0.22.17_linux_amd64.zip \
-    && unzip pocketbase_0.22.17_linux_amd64.zip \
+# Use SAME version as local: v0.30.1
+ARG PB_VERSION=0.30.1
+RUN wget -q https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip \
+    && unzip pocketbase_${PB_VERSION}_linux_amd64.zip \
     && chmod +x pocketbase \
-    && rm pocketbase_0.22.17_linux_amd64.zip
+    && rm pocketbase_${PB_VERSION}_linux_amd64.zip
 
-# 2. Copy your ENTIRE database with records
+# Copy your existing database (from v0.30.1)
 COPY pocketbase/pb_data /app/pb_data
 
 # 3. Set proper permissions for the database
