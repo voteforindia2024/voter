@@ -1,25 +1,26 @@
-# Use a minimal base image
 FROM alpine:latest
 
 # Install dependencies
 RUN apk add --no-cache bash
 
-# Create app directory
 WORKDIR /app
 
-# Copy PocketBase binary and make executable
-COPY pocketbase /app/pocketbase
-RUN chmod +x /app/pocketbase
+# 1. Download Linux binary for Render (NOT your Windows .exe)
+RUN wget -q https://github.com/pocketbase/pocketbase/releases/download/v0.22.17/pocketbase_0.22.17_linux_amd64.zip \
+    && unzip pocketbase_0.22.17_linux_amd64.zip \
+    && chmod +x pocketbase \
+    && rm pocketbase_0.22.17_linux_amd64.zip
 
-# Copy startup script
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+# 2. Copy your ENTIRE database with records
+COPY pocketbase/pb_data /app/pb_data
 
-# Copy your existing database (optional - use volume for persistence)
-COPY pocketbase/pb_data/ /app/pb_data/
+# 3. Set proper permissions for the database
+RUN chmod -R 755 /app/pb_data
 
-# Expose port
+# 4. Copy startup script
+COPY start.sh .
+RUN chmod +x start.sh
+
 EXPOSE 8080
 
-# Start the application
-CMD ["/app/start.sh"]
+CMD ["./start.sh"]
