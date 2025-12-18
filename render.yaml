@@ -1,14 +1,11 @@
 services:
   - type: web
-    name: pocketbase-render
-    env: linux
-    region: oregon
+    name: pocketbase
+    env: docker
     plan: free
-    buildCommand: ""
-    startCommand: "./pocketbase-render serve --dir /mnt/pb_data"
-    disk:
-      mountPath: /mnt/pb_data
-      sizeGB: 1
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
     envVars:
-      - key: PB_DATA_DIR
-        value: /mnt/pb_data
+      - key: PORT
+        value: 8080
+    autoDeploy: true
