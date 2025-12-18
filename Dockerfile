@@ -16,7 +16,7 @@ COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
 # Copy your existing database (optional - use volume for persistence)
-COPY pb_data/ /app/pb_data/
+COPY pocketbase/pb_data/ /app/pb_data/
 
 # Expose port
 EXPOSE 8080
