@@ -1,6 +1,8 @@
 # Ignore node modules
 node_modules/
-
+pb_data
+pocketbase/pb_data
+*.db
 # Logs
 logs
 *.log

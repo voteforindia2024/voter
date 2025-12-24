@@ -1,21 +1,28 @@
 #!/bin/bash
 set -e
 
-echo "Starting PocketBase with existing data..."
+echo "Starting PocketBase..."
 
-# Verify database exists
-if [ -f "/app/pb_data/data.db" ]; then
-    echo "Database found: $(du -h /app/pb_data/data.db | cut -f1)"
+# Verify persistent disk
+if [ -d "/pb_data" ]; then
+  echo "Persistent disk mounted at /pb_data"
 else
-    echo "Warning: Database file not found!"
+  echo "ERROR: /pb_data not mounted"
+  exit 1
+fi
+
+# Verify database
+if [ -f "/pb_data/data.db" ]; then
+  echo "Database found: $(du -h /pb_data/data.db | cut -f1)"
+else
+  echo "No database found yet. PocketBase will create one."
 fi
 
 # Use Render's PORT
 PORT=${PORT:-8080}
-
 echo "Starting on port: $PORT"
 
-# Start PocketBase with existing data directory
+# Start PocketBase USING PERSISTENT DISK
 exec ./pocketbase serve \
   --http=0.0.0.0:$PORT \
-  --dir=/app/pb_data
+  --dir=/pb_data
