@@ -22,7 +22,7 @@ fi
 PORT=${PORT:-8080}
 echo "Starting on port: $PORT"
 
-# Start PocketBase USING PERSISTENT DISK
+# Start PocketBase using persistent disk
 exec ./pocketbase serve \
   --http=0.0.0.0:$PORT \
   --dir=/pb_data
