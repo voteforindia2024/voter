@@ -2,10 +2,16 @@ services:
   - type: web
     name: pocketbase
     env: docker
-    plan: free
+    plan: starter   # OR higher (free is risky)
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
+    autoDeploy: true
+
     envVars:
       - key: PORT
         value: 8080
-    autoDeploy: true
+
+    disk:
+      name: pb-data
+      mountPath: /pb_data
+      sizeGB: 10
